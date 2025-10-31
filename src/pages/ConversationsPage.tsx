@@ -30,7 +30,7 @@ const quickActions = [
 ];
 
 const ConversationsPage = () => {
-  const { token, userId, logout } = useAuth();
+  const { token, userId, username, email, logout } = useAuth();
   const navigate = useNavigate();
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -60,7 +60,8 @@ const ConversationsPage = () => {
     void fetchConversations();
   }, [token]);
 
-  const userInitials = (userId ?? "Usuário")
+  const displayName = username ?? email ?? userId ?? "Usuário";
+  const userInitials = displayName
     .split(" ")
     .map((part) => part.charAt(0).toUpperCase())
     .join("")
@@ -103,8 +104,8 @@ const ConversationsPage = () => {
         <div className="sidebar-footer">
           <div className="sidebar-avatar">{userInitials || "U"}</div>
           <div className="sidebar-user">
-            <strong>{userId ?? "Usuário"}</strong>
-            <span>Conectado</span>
+            <strong>{displayName}</strong>
+            <span>{email ?? "Conectado"}</span>
           </div>
           <button type="button" className="sidebar-logout" onClick={logout}>
             Sair
@@ -113,7 +114,7 @@ const ConversationsPage = () => {
       </aside>
 
       <main className="workspace">
-        <div className="workspace-inner">
+        <div className="workspace-inner workspace-scroll">
           <header className="topbar">
             <div>
               <div className="topbar-brand">Nexus AI</div>

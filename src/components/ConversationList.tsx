@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import type { ConversationSummary } from "../types";
 
@@ -12,15 +13,15 @@ const ConversationList = ({
   conversations,
   isLoading,
   error,
-  activeConversationId
+  activeConversationId,
 }: ConversationListProps) => {
   if (isLoading) {
-    return <p className="text-muted">Carregando conversas...</p>;
+    return <p style={styles.muted}>Carregando conversas...</p>;
   }
 
   if (error) {
     return (
-      <p className="text-muted" role="alert">
+      <p style={{ ...styles.muted, color: "#f87171" }} role="alert">
         {error}
       </p>
     );
@@ -28,36 +29,43 @@ const ConversationList = ({
 
   if (!conversations.length) {
     return (
-      <p className="text-muted">
+      <p style={styles.muted}>
         Nenhuma conversa encontrada. Crie uma nova para começar.
       </p>
     );
   }
 
   return (
-    <div className="sidebar-list">
+    <div style={styles.listContainer}>
       {conversations.map((conversation) => {
         const updatedAt = new Date(conversation.updated_at).toLocaleString("pt-BR");
+        const isActive = conversation.conversation_id === activeConversationId;
         return (
           <Link
             key={conversation.conversation_id}
             to={`/conversations/${conversation.conversation_id}`}
-            className={`sidebar-link${
-              conversation.conversation_id === activeConversationId ? " is-active" : ""
-            }`}
+            style={{
+              ...styles.link,
+              ...(isActive ? styles.activeLink : {}),
+            }}
           >
-            <span className="sidebar-link-title">
-              {conversation.title || conversation.conversation_id}
-            </span>
-            <span className="text-muted">
-              {conversation.model} · modo {conversation.mode}
-            </span>
-            {conversation.last_message_preview ? (
-              <span className="text-muted" style={{ fontSize: "0.8rem" }}>
-                {conversation.last_message_preview}
+            <div style={styles.linkHeader}>
+              <span style={styles.title}>
+                {conversation.title || conversation.conversation_id}
               </span>
-            ) : null}
-            <div className="sidebar-link-meta">
+              <span
+                style={{
+                  ...styles.badge,
+                  backgroundColor: isActive ? "#3b82f6" : "#334155",
+                }}
+              >
+                {conversation.model}
+              </span>
+            </div>
+
+            <span style={styles.subtitle}>modo {conversation.mode}</span>
+
+            <div style={styles.meta}>
               <span>mensagens · {conversation.message_count}</span>
               <span>{updatedAt}</span>
             </div>
@@ -69,3 +77,72 @@ const ConversationList = ({
 };
 
 export default ConversationList;
+
+//
+// 🎨 Inline styles – consistentes com o restante do sistema Nexus
+//
+const styles: Record<string, React.CSSProperties> = {
+  listContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+    marginTop: "0.5rem",
+  },
+  link: {
+    display: "flex",
+    flexDirection: "column",
+    textDecoration: "none",
+    background: "rgba(30,41,59,0.8)",
+    border: "1px solid rgba(255,255,255,0.05)",
+    borderRadius: "10px",
+    padding: "0.75rem 1rem",
+    color: "#f1f5f9",
+    transition: "background 0.2s ease, border 0.2s ease, transform 0.1s ease",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+  },
+  activeLink: {
+    background: "rgba(59,130,246,0.15)",
+    border: "1px solid rgba(59,130,246,0.4)",
+    transform: "scale(1.01)",
+  },
+  linkHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "0.25rem",
+  },
+  title: {
+    fontSize: "0.95rem",
+    fontWeight: 600,
+    color: "#e2e8f0",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: "180px",
+  },
+  badge: {
+    fontSize: "0.7rem",
+    color: "white",
+    padding: "0.15rem 0.5rem",
+    borderRadius: "6px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  subtitle: {
+    fontSize: "0.8rem",
+    color: "#94a3b8",
+    marginBottom: "0.35rem",
+  },
+  meta: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "0.75rem",
+    color: "#64748b",
+  },
+  muted: {
+    color: "#94a3b8",
+    fontSize: "0.9rem",
+    padding: "0.5rem",
+  },
+};
+

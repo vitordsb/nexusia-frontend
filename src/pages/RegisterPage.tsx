@@ -1,10 +1,15 @@
 
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginWithCredentials, requestAccessToken } from "../api/auth";
+import {
+  loginWithCredentials,
+  registerUser,
+  requestAccessToken,
+} from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 
-const LoginPage = () => {
+const RegisterPage = () => {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -15,25 +20,33 @@ const LoginPage = () => {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!email.trim() || !password) {
-      setError("Informe email e senha para entrar.");
+
+    if (!username.trim() || !email.trim() || !password) {
+      setError("Informe nome de usuário, email e senha para criar a conta.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      const user = await loginWithCredentials(email.trim().toLowerCase(), password);
-      const token = await requestAccessToken(user.id);
-      setAuthData({
-        token,
-        userId: user.id,
-        username: user.username,
-        email: user.email,
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const trimmedUsername = username.trim();
+
+      await registerUser({
+        email: normalizedEmail,
+        username: trimmedUsername,
+        password,
       });
+
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao autenticar usuário");
+      setError(err instanceof Error ? err.message : "Não foi possível criar a conta.");
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +68,7 @@ const LoginPage = () => {
         onSubmit={handleSubmit}
         style={{
           width: "100%",
-          maxWidth: "420px",
+          maxWidth: "480px",
           background: "rgba(30, 41, 59, 0.9)",
           borderRadius: "16px",
           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
@@ -75,7 +88,7 @@ const LoginPage = () => {
             color: "#60a5fa",
           }}
         >
-          Nexus<span style={{ color: "#fff" }}>AI</span> Login
+          Criar conta
         </h1>
 
         <p
@@ -86,9 +99,39 @@ const LoginPage = () => {
             marginBottom: "2rem",
           }}
         >
-          Entre com seu email e senha vinculada à sua chave API da NexusAI.
+          Sua senha será sincronizada com a chave API utilizada na NexusAI para gerar
+          conversas.
         </p>
 
+        {/* Nome de usuário */}
+        <div style={{ marginBottom: "1rem" }}>
+          <label htmlFor="username-input" style={{ fontSize: "0.9rem" }}>
+            Nome de usuário
+          </label>
+          <input
+            id="username-input"
+            placeholder="Seu nome completo ou apelido"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            style={{
+              width: "100%",
+              marginTop: "0.3rem",
+              padding: "0.75rem 1rem",
+              borderRadius: "8px",
+              border: "1px solid #334155",
+              background: "#1e293b",
+              color: "white",
+              outline: "none",
+              fontSize: "0.95rem",
+              transition: "border 0.2s, box-shadow 0.2s",
+            }}
+            onFocus={(e) => (e.target.style.border = "1px solid #60a5fa")}
+            onBlur={(e) => (e.target.style.border = "1px solid #334155")}
+          />
+        </div>
+
+        {/* Email */}
         <div style={{ marginBottom: "1rem" }}>
           <label htmlFor="email-input" style={{ fontSize: "0.9rem" }}>
             Email
@@ -117,6 +160,7 @@ const LoginPage = () => {
           />
         </div>
 
+        {/* Senha */}
         <div style={{ marginBottom: "1rem" }}>
           <label htmlFor="password-input" style={{ fontSize: "0.9rem" }}>
             Senha / Chave API
@@ -127,7 +171,7 @@ const LoginPage = () => {
             placeholder="******"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
             style={{
               width: "100%",
               marginTop: "0.3rem",
@@ -145,6 +189,7 @@ const LoginPage = () => {
           />
         </div>
 
+        {/* Erros */}
         {error && (
           <p
             role="alert"
@@ -162,6 +207,7 @@ const LoginPage = () => {
           </p>
         )}
 
+        {/* Botão */}
         <button
           type="submit"
           disabled={isLoading}
@@ -191,9 +237,10 @@ const LoginPage = () => {
             if (!isLoading) e.currentTarget.style.transform = "scale(1)";
           }}
         >
-          {isLoading ? "Entrando..." : "Entrar"}
+          {isLoading ? "Criando conta..." : "Criar conta"}
         </button>
 
+        {/* Link para login */}
         <p
           style={{
             marginTop: "1.5rem",
@@ -202,9 +249,9 @@ const LoginPage = () => {
             color: "#cbd5e1",
           }}
         >
-          Ainda não possui conta?{" "}
+          Já possui uma conta?{" "}
           <Link
-            to="/register"
+            to="/login"
             style={{
               color: "#60a5fa",
               textDecoration: "none",
@@ -213,7 +260,7 @@ const LoginPage = () => {
             onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
             onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
           >
-            Crie agora
+            Faça login
           </Link>
         </p>
       </form>
@@ -221,5 +268,5 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default RegisterPage;
 

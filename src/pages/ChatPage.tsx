@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ChatMessage from "../components/ChatMessage";
 import MessageComposer from "../components/MessageComposer";
@@ -11,7 +12,7 @@ import type { ConversationDetail, ConversationSummary, Message } from "../types"
 
 const ChatPage = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const { token, userId, logout } = useAuth();
+  const { token, userId, username, email, logout } = useAuth();
   const navigate = useNavigate();
 
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
@@ -22,6 +23,16 @@ const ChatPage = () => {
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
   const [sidebarError, setSidebarError] = useState<string | null>(null);
   const [showNewConversation, setShowNewConversation] = useState(false);
+
+  // 🔽 referência para rolagem automática
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Scrolla automaticamente para o final quando as mensagens mudam
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [conversation?.messages]);
 
   const fetchSidebarConversations = async () => {
     if (!token) return;
@@ -40,9 +51,7 @@ const ChatPage = () => {
   };
 
   const loadConversation = async () => {
-    if (!token || !conversationId) {
-      return;
-    }
+    if (!token || !conversationId) return;
     try {
       setIsLoading(true);
       const data = await getConversation(token, conversationId);
@@ -65,17 +74,12 @@ const ChatPage = () => {
   const messages = useMemo(() => conversation?.messages ?? [], [conversation]);
 
   const handleSend = async (content: string) => {
-    if (!token || !conversation || !conversationId) {
-      return;
-    }
+    if (!token || !conversation || !conversationId) return;
     setIsSending(true);
     try {
       const payloadMessages: Message[] = [
-        ...messages.map((message) => ({
-          role: message.role,
-          content: message.content
-        })),
-        { role: "user", content }
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content },
       ];
 
       const response = await sendChatCompletion(token, {
@@ -83,7 +87,7 @@ const ChatPage = () => {
         mode: conversation.mode,
         conversation_id: conversationId,
         stream: false,
-        messages: payloadMessages
+        messages: payloadMessages,
       });
 
       const now = new Date();
@@ -91,24 +95,24 @@ const ChatPage = () => {
 
       const updatedMessages: Message[] = [
         ...messages,
-        { role: "user", content, timestamp: now.toISOString() }
+        { role: "user", content, timestamp: now.toISOString() },
       ];
 
       if (assistantMessage) {
         updatedMessages.push({
           role: assistantMessage.role,
           content: assistantMessage.content,
-          timestamp: new Date(response.created * 1000).toISOString()
+          timestamp: new Date(response.created * 1000).toISOString(),
         });
       }
 
       setConversation((current) =>
         current
           ? {
-            ...current,
-            messages: updatedMessages,
-            updated_at: new Date().toISOString()
-          }
+              ...current,
+              messages: updatedMessages,
+              updated_at: new Date().toISOString(),
+            }
           : current
       );
       setError(null);
@@ -123,11 +127,10 @@ const ChatPage = () => {
     }
   };
 
-  if (!conversationId) {
-    return <NavigateToHome />;
-  }
+  if (!conversationId) return <NavigateToHome />;
 
-  const userInitials = (userId ?? "Usuário")
+  const displayName = username ?? email ?? userId ?? "Usuário";
+  const userInitials = displayName
     .split(" ")
     .map((part) => part.charAt(0).toUpperCase())
     .join("")
@@ -141,11 +144,11 @@ const ChatPage = () => {
           <button
             className="sidebar-new-button"
             type="button"
-            onClick={() => setShowNewConversation((current) => !current)}
+            onClick={() => setShowNewConversation((c) => !c)}
           >
             + Nova Conversa
           </button>
-          {showNewConversation ? (
+          {showNewConversation && (
             <NewConversationForm
               variant="sidebar"
               onCancel={() => setShowNewConversation(false)}
@@ -155,7 +158,7 @@ const ChatPage = () => {
                 navigate(`/conversations/${newConversationId}`);
               }}
             />
-          ) : null}
+          )}
         </div>
 
         <div className="sidebar-section">
@@ -171,8 +174,8 @@ const ChatPage = () => {
         <div className="sidebar-footer">
           <div className="sidebar-avatar">{userInitials || "U"}</div>
           <div className="sidebar-user">
-            <strong>{userId ?? "Usuário"}</strong>
-            <span>Conectado</span>
+            <strong>{displayName}</strong>
+            <span>{email ?? "Conectado"}</span>
           </div>
           <button type="button" className="sidebar-logout" onClick={logout}>
             Sair
@@ -188,8 +191,8 @@ const ChatPage = () => {
               <div className="subtitle">
                 {conversation
                   ? `${conversation.title || conversation.conversation_id} · ${
-                    conversation.model
-                  } (${conversation.mode})`
+                      conversation.model
+                    } (${conversation.mode})`
                   : "Carregando conversa..."}
               </div>
             </div>
@@ -203,6 +206,7 @@ const ChatPage = () => {
             </div>
           </header>
 
+          {/* CONTEÚDO PRINCIPAL */}
           {isLoading ? (
             <div className="panel">
               <p className="text-muted">Carregando conversa...</p>
@@ -221,12 +225,17 @@ const ChatPage = () => {
               </button>
             </div>
           ) : conversation ? (
-            <>
+            <div className="chat-content">
               <div
-                className="panel"
-                style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}
+                className="panel panel-scroll"
+                style={{
+                  maxHeight: "calc(100vh - 200px)",
+                  overflowY: "auto",
+                  paddingBottom: "0.5rem",
+                  scrollBehavior: "smooth",
+                }}
               >
-                <div className="message-list">
+                <div className="message-list" style={{ paddingBottom: "0.5rem" }}>
                   {messages.length ? (
                     messages.map((message, index) => (
                       <ChatMessage key={`${message.role}-${index}`} message={message} />
@@ -236,6 +245,8 @@ const ChatPage = () => {
                       Nenhuma mensagem ainda. Envie a primeira!
                     </p>
                   )}
+                  {/* 🔽 âncora de rolagem */}
+                  <div ref={messagesEndRef} />
                 </div>
               </div>
               <MessageComposer
@@ -244,7 +255,7 @@ const ChatPage = () => {
                 model={conversation.model}
                 mode={conversation.mode}
               />
-            </>
+            </div>
           ) : (
             <div className="panel">
               <p className="text-muted">
@@ -270,3 +281,4 @@ const NavigateToHome = () => {
 };
 
 export default ChatPage;
+

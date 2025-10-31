@@ -7,10 +7,19 @@ import {
   useState
 } from "react";
 
+type AuthData = {
+  token: string;
+  userId: string;
+  username: string;
+  email: string;
+};
+
 type AuthContextValue = {
   token: string | null;
   userId: string | null;
-  setAuthData: (data: { token: string; userId: string }) => void;
+  username: string | null;
+  email: string | null;
+  setAuthData: (data: AuthData) => void;
   logout: () => void;
 };
 
@@ -19,37 +28,45 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const STORAGE_KEY = "nexusai-auth";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [auth, setAuth] = useState<AuthData | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as { token: string; userId: string };
-        setToken(parsed.token);
-        setUserId(parsed.userId);
-      } catch {
+    if (!stored) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(stored) as AuthData;
+      if (parsed?.token && parsed?.userId) {
+        setAuth(parsed);
+      } else {
         localStorage.removeItem(STORAGE_KEY);
       }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, []);
 
-  const setAuthData = useCallback((data: { token: string; userId: string }) => {
-    setToken(data.token);
-    setUserId(data.userId);
+  const setAuthData = useCallback((data: AuthData) => {
+    setAuth(data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
-    setUserId(null);
+    setAuth(null);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const value = useMemo(
-    () => ({ token, userId, setAuthData, logout }),
-    [token, userId, setAuthData, logout]
+    () => ({
+      token: auth?.token ?? null,
+      userId: auth?.userId ?? null,
+      username: auth?.username ?? null,
+      email: auth?.email ?? null,
+      setAuthData,
+      logout
+    }),
+    [auth, setAuthData, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
