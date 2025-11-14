@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ChatMessage from "../components/ChatMessage";
 import MessageComposer from "../components/MessageComposer";
@@ -8,6 +8,7 @@ import NewConversationForm from "../components/NewConversationForm";
 import { getConversation, listConversations } from "../api/conversations";
 import { sendChatCompletion } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
+import { getModelCreditCost, getModelDisplayName } from "../utils/credits";
 import type { ConversationDetail, ConversationSummary, Message } from "../types";
 
 const formatCredits = (value: number | null) =>
@@ -15,11 +16,13 @@ const formatCredits = (value: number | null) =>
 
 const ChatPage = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const { token, userId, username, email, credits, logout } = useAuth();
+  const { token, userId, username, email, credits, logout, refreshCredits } = useAuth();
   const navigate = useNavigate();
 
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedConversation, setHasLoadedConversation] = useState(false);
+  const [isSwitchingConversation, setIsSwitchingConversation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -30,6 +33,7 @@ const ChatPage = () => {
 
   // 🔽 referência para rolagem automática
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const hasLoadedConversationRef = useRef(false);
 
   // Scrolla automaticamente para o final quando as mensagens mudam
   useEffect(() => {
@@ -54,24 +58,35 @@ const ChatPage = () => {
     }
   };
 
-  const loadConversation = async () => {
+  const loadConversation = useCallback(async () => {
     if (!token || !conversationId) return;
+    setIsLoading(true);
+    setError(null);
+    if (hasLoadedConversationRef.current) {
+      setIsSwitchingConversation(true);
+    }
     try {
-      setIsLoading(true);
       const data = await getConversation(token, conversationId);
       setConversation(data);
+      setHasLoadedConversation(true);
+      hasLoadedConversationRef.current = true;
       setError(null);
     } catch (err) {
+      setConversation(null);
       setError(
         err instanceof Error ? err.message : "Não foi possível carregar a conversa."
       );
     } finally {
       setIsLoading(false);
+      setIsSwitchingConversation(false);
     }
-  };
+  }, [conversationId, token]);
 
   useEffect(() => {
     void loadConversation();
+  }, [loadConversation]);
+
+  useEffect(() => {
     void fetchSidebarConversations();
   }, [conversationId, token]);
 
@@ -80,9 +95,20 @@ const ChatPage = () => {
   }, [conversationId]);
 
   const messages = useMemo(() => conversation?.messages ?? [], [conversation]);
+  const composerCost = conversation ? getModelCreditCost(conversation.model) : null;
 
   const handleSend = async (content: string) => {
-    if (!token || !conversation || !conversationId) return;
+    if (!token || !conversation || !conversationId || isSwitchingConversation) return;
+    const costPerMessage = getModelCreditCost(conversation.model);
+    const availableCredits = credits ?? 0;
+    if (availableCredits < costPerMessage) {
+      setError(
+        `Créditos insuficientes para usar ${getModelDisplayName(
+          conversation.model,
+        )}. Necessários: ${formatCredits(costPerMessage)} créditos. Recarregue na página de Perfil.`,
+      );
+      return;
+    }
     setIsSending(true);
     try {
       const payloadMessages: Message[] = [
@@ -124,6 +150,7 @@ const ChatPage = () => {
           : current
       );
       setError(null);
+      void refreshCredits();
       void loadConversation();
       void fetchSidebarConversations();
     } catch (err) {
@@ -245,6 +272,9 @@ const ChatPage = () => {
               >
                 Assinaturas
               </button>
+              <Link to="/perfil" className="btn btn-outline">
+                Perfil
+              </Link>
               <Link to="/" className="btn btn-secondary">
                 ← Conversas
               </Link>
@@ -252,9 +282,12 @@ const ChatPage = () => {
           </header>
 
           {/* CONTEÚDO PRINCIPAL */}
-          {isLoading ? (
+          {!hasLoadedConversation && isLoading ? (
             <div className="panel">
-              <p className="text-muted">Carregando conversa...</p>
+              <div className="loading-indicator">
+                <span className="spinner" aria-hidden="true" />
+                <span>Carregando conversa...</span>
+              </div>
             </div>
           ) : error ? (
             <div className="panel">
@@ -270,7 +303,11 @@ const ChatPage = () => {
               </button>
             </div>
           ) : conversation ? (
-            <div className="chat-content">
+            <div
+              className={`chat-content${
+                isSwitchingConversation ? " chat-content-switching" : ""
+              }`}
+            >
               <div
                 className="panel panel-scroll"
                 style={{
@@ -297,9 +334,18 @@ const ChatPage = () => {
               <MessageComposer
                 onSend={handleSend}
                 isSending={isSending}
+                isBusy={isSwitchingConversation}
+                busyLabel="Carregando..."
+                creditCost={composerCost ?? undefined}
                 model={conversation.model}
                 mode={conversation.mode}
               />
+              {isSwitchingConversation ? (
+                <div className="chat-loading-overlay" aria-live="polite">
+                  <span className="spinner" aria-hidden="true" />
+                  <span>Trocando de conversa...</span>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="panel">

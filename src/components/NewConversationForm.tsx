@@ -11,8 +11,8 @@ type NewConversationFormProps = {
   onCancel?: () => void;
 };
 
-const defaultModel = "gpt-5";
-const defaultMode: CreateConversationPayload["mode"] = "medium";
+const defaultModel = "gpt-5-mini";
+const defaultMode: CreateConversationPayload["mode"] = "low";
 
 const NewConversationForm = ({
   onCreated,

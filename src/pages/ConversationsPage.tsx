@@ -167,6 +167,13 @@ const ConversationsPage = () => {
               >
                 Assinaturas
               </button>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => navigate("/perfil")}
+              >
+                Perfil
+              </button>
               <button className="btn btn-secondary" onClick={fetchConversations}>
                 Atualizar
               </button>

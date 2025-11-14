@@ -18,7 +18,20 @@ const ConversationList = ({
   onSelect,
 }: ConversationListProps) => {
   if (isLoading) {
-    return <p style={styles.muted}>Carregando conversas...</p>;
+    return (
+      <div className="conversation-skeleton" aria-live="polite" aria-busy="true">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="conversation-skeleton-card">
+            <div className="conversation-skeleton-line" />
+            <div className="conversation-skeleton-line short" />
+            <div className="conversation-skeleton-meta">
+              <span className="conversation-skeleton-line xshort" />
+              <span className="conversation-skeleton-line xshort" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (error) {

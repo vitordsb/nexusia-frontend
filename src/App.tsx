@@ -4,6 +4,7 @@ import RegisterPage from "./pages/RegisterPage";
 import ConversationsPage from "./pages/ConversationsPage";
 import ChatPage from "./pages/ChatPage";
 import SubscriptionsPage from "./pages/SubscriptionsPage";
+import ProfilePage from "./pages/ProfilePage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useAuth } from "./context/AuthContext";
@@ -51,6 +52,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <SubscriptionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/perfil"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />
