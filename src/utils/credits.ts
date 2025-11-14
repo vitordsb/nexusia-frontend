@@ -1,12 +1,12 @@
 const MODEL_CREDIT_COST: Record<string, number> = {
-  "gpt-5": 18,
-  "gpt-5-pro": 28,
-  "gpt-5-mini": 8,
-  "claude-opus-4-1": 22,
-  "claude-sonnet-4-5": 15,
-  "claude-haiku-4-5": 6,
-  "gemini-2-5-pro": 16,
-  "gemini-2-5-flash": 7,
+  "gpt-5": 0,
+  "gpt-5-pro": 0,
+  "gpt-5-mini": 0,
+  "claude-opus-4-1": 0,
+  "claude-sonnet-4-5": 0,
+  "claude-haiku-4-5": 0,
+  "gemini-2-5-pro": 0,
+  "gemini-2-5-flash": 0,
 };
 
 const MODEL_DISPLAY_NAME: Record<string, string> = {
@@ -31,9 +31,3 @@ export function getModelDisplayName(model: string) {
   if (!model) return "Modelo desconhecido";
   return MODEL_DISPLAY_NAME[model] ?? model.toUpperCase();
 }
-
-export const creditModelList = Object.entries(MODEL_CREDIT_COST).map(([model, cost]) => ({
-  model,
-  cost,
-  label: getModelDisplayName(model),
-}));

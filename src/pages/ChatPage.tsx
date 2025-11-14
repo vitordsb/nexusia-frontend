@@ -91,6 +91,11 @@ const ChatPage = () => {
   }, [conversationId, token]);
 
   useEffect(() => {
+    if (!token) return;
+    void refreshCredits();
+  }, [conversationId, refreshCredits, token]);
+
+  useEffect(() => {
     setIsSidebarOpen(false);
   }, [conversationId]);
 
@@ -109,13 +114,44 @@ const ChatPage = () => {
       );
       return;
     }
+
+    const baseMessages = conversation.messages ?? [];
+    const payloadMessages: Message[] = [
+      ...baseMessages.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user", content },
+    ];
+
+    const now = new Date();
+    const optimisticIdSeed = `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
+    const userClientId = `user-${optimisticIdSeed}`;
+    const assistantPlaceholderId = `assistant-${optimisticIdSeed}`;
+
+    const optimisticUserMessage: Message = {
+      role: "user",
+      content,
+      timestamp: now.toISOString(),
+      clientId: userClientId,
+    };
+
+    const pendingAssistantMessage: Message = {
+      role: "assistant",
+      content: "",
+      isLoading: true,
+      clientId: assistantPlaceholderId,
+    };
+
+    setConversation((current) =>
+      current
+        ? {
+            ...current,
+            messages: [...current.messages, optimisticUserMessage, pendingAssistantMessage],
+            updated_at: now.toISOString(),
+          }
+        : current
+    );
+
     setIsSending(true);
     try {
-      const payloadMessages: Message[] = [
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content },
-      ];
-
       const response = await sendChatCompletion(token, {
         model: conversation.model,
         mode: conversation.mode,
@@ -124,36 +160,45 @@ const ChatPage = () => {
         messages: payloadMessages,
       });
 
-      const now = new Date();
       const assistantMessage = response.choices[0]?.message;
+      setConversation((current) => {
+        if (!current) return current;
+        const withoutPlaceholder = current.messages.filter(
+          (message) => message.clientId !== assistantPlaceholderId
+        );
+        const updatedMessages: Message[] = [...withoutPlaceholder];
 
-      const updatedMessages: Message[] = [
-        ...messages,
-        { role: "user", content, timestamp: now.toISOString() },
-      ];
+        if (assistantMessage) {
+          updatedMessages.push({
+            role: assistantMessage.role,
+            content: assistantMessage.content,
+            timestamp: new Date(response.created * 1000).toISOString(),
+          });
+        }
 
-      if (assistantMessage) {
-        updatedMessages.push({
-          role: assistantMessage.role,
-          content: assistantMessage.content,
-          timestamp: new Date(response.created * 1000).toISOString(),
-        });
-      }
-
-      setConversation((current) =>
-        current
-          ? {
-              ...current,
-              messages: updatedMessages,
-              updated_at: new Date().toISOString(),
-            }
-          : current
-      );
+        return {
+          ...current,
+          messages: updatedMessages,
+          updated_at: new Date().toISOString(),
+        };
+      });
       setError(null);
       void refreshCredits();
       void loadConversation();
       void fetchSidebarConversations();
     } catch (err) {
+      setConversation((current) =>
+        current
+          ? {
+              ...current,
+              messages: current.messages.filter(
+                (message) =>
+                  message.clientId !== assistantPlaceholderId &&
+                  message.clientId !== userClientId
+              ),
+            }
+          : current
+      );
       setError(
         err instanceof Error ? err.message : "Não foi possível enviar a mensagem."
       );
@@ -222,9 +267,18 @@ const ChatPage = () => {
             <strong>{displayName}</strong>
             <span>{email ?? "Conectado"}</span>
           </div>
-          <button type="button" className="sidebar-logout" onClick={logout}>
-            Sair
-          </button>
+          <div className="sidebar-footer-actions">
+            <button
+              type="button"
+              className="sidebar-profile-button"
+              onClick={() => navigate("/perfil")}
+            >
+              Assinatura
+            </button>
+            <button type="button" className="sidebar-logout" onClick={logout}>
+              Sair
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -265,15 +319,8 @@ const ChatPage = () => {
               <span className="topbar-status">
                 <span className="status-dot" /> Multi-IA ativo
               </span>
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => navigate("/assinaturas")}
-              >
-                Assinaturas
-              </button>
               <Link to="/perfil" className="btn btn-outline">
-                Perfil
+                Assinatura
               </Link>
               <Link to="/" className="btn btn-secondary">
                 ← Conversas
@@ -319,9 +366,14 @@ const ChatPage = () => {
               >
                 <div className="message-list" style={{ paddingBottom: "0.5rem" }}>
                   {messages.length ? (
-                    messages.map((message, index) => (
-                      <ChatMessage key={`${message.role}-${index}`} message={message} />
-                    ))
+                    messages.map((message, index) => {
+                      const messageKey =
+                        message.clientId ??
+                        (message.timestamp
+                          ? `${message.role}-${message.timestamp}`
+                          : `${message.role}-${index}`);
+                      return <ChatMessage key={messageKey} message={message} />;
+                    })
                   ) : (
                     <p className="text-muted">
                       Nenhuma mensagem ainda. Envie a primeira!

@@ -4,6 +4,8 @@ export type Message = {
   role: MessageRole;
   content: string;
   timestamp?: string;
+  clientId?: string;
+  isLoading?: boolean;
 };
 
 export type ConversationSummary = {

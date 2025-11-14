@@ -121,9 +121,18 @@ const ConversationsPage = () => {
             <strong>{displayName}</strong>
             <span>{email ?? "Conectado"}</span>
           </div>
-          <button type="button" className="sidebar-logout" onClick={logout}>
-            Sair
-          </button>
+          <div className="sidebar-footer-actions">
+            <button
+              type="button"
+              className="sidebar-profile-button"
+              onClick={() => navigate("/perfil")}
+            >
+              Assinatura
+            </button>
+            <button type="button" className="sidebar-logout" onClick={logout}>
+              Sair
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -161,18 +170,11 @@ const ConversationsPage = () => {
                 <span className="status-dot" /> Multi-IA ativo
               </span>
               <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => navigate("/assinaturas")}
-              >
-                Assinaturas
-              </button>
-              <button
                 className="btn btn-outline"
                 type="button"
                 onClick={() => navigate("/perfil")}
               >
-                Perfil
+                Assinatura
               </button>
               <button className="btn btn-secondary" onClick={fetchConversations}>
                 Atualizar

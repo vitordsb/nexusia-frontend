@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { creditModelList, getModelCreditCost, getModelDisplayName } from "../utils/credits";
+import { getModelDisplayName } from "../utils/credits";
 
 const quickTopUps = [50, 100, 250, 500];
 
@@ -110,9 +110,6 @@ const ProfilePage = () => {
             <button className="btn btn-primary" onClick={() => navigate(-1)}>
               ← Voltar
             </button>
-            <Link to="/assinaturas" className="btn btn-secondary">
-              Planos oficiais
-            </Link>
           </div>
         </div>
       </header>
@@ -185,13 +182,11 @@ const ProfilePage = () => {
                 <tr>
                   <th>Modelo</th>
                   <th>Créditos usados</th>
-                  <th>Custo por resposta</th>
                   <th>Participação</th>
                 </tr>
               </thead>
               <tbody>
                 {usageEntries.map(([model, value]) => {
-                  const cost = getModelCreditCost(model);
                   const percent = totalUsed
                     ? `${((value / totalUsed) * 100).toFixed(1)}%`
                     : "—";
@@ -204,7 +199,6 @@ const ProfilePage = () => {
                         </div>
                       </td>
                       <td>{formatCredits(value)}</td>
-                      <td>{formatCredits(cost)} créditos</td>
                       <td>{percent}</td>
                     </tr>
                   );
@@ -214,18 +208,6 @@ const ProfilePage = () => {
           ) : (
             <p className="profile-hint">Ainda não há consumo registrado nesta conta.</p>
           )}
-
-          <div className="model-cost-list">
-            <span className="profile-chip">Custos por IA</span>
-            <div className="model-cost-items">
-              {creditModelList.map((model) => (
-                <div key={model.model} className="model-cost-card">
-                  <strong>{model.label}</strong>
-                  <span>{formatCredits(model.cost)} créditos</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
