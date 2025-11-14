@@ -22,16 +22,7 @@ const formatBRL = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
 const SubscriptionsPage = () => {
-  const {
-    userId,
-    username,
-    email,
-    credits,
-    token,
-    setAuthData,
-    creditUsage,
-    creditHistory,
-  } = useAuth();
+  const { userId, username, email, credits, token, setAuthData, creditHistory } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [actionPlanId, setActionPlanId] = useState<string | null>(null);
@@ -103,7 +94,6 @@ const SubscriptionsPage = () => {
         username: profile.username,
         email: profile.email,
         credits: profile.credits ?? 0,
-        creditUsage,
         creditHistory,
       });
       setFeedback({
