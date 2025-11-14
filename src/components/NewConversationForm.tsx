@@ -152,8 +152,6 @@ const NewConversationForm = ({
             <option value="claude-opus-4-1">Claude Opus 4.1</option>
             <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
             <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
-            <option value="gemini-2-5-pro">Gemini 2.5 Pro</option>
-            <option value="gemini-2-5-flash">Gemini 2.5 Flash</option>
           </select>
         </div>
 

@@ -16,8 +16,6 @@ const MODEL_DISPLAY_NAME: Record<string, string> = {
   "claude-opus-4-1": "Claude 4.1 Opus",
   "claude-sonnet-4-5": "Claude 4.5 Sonnet",
   "claude-haiku-4-5": "Claude 4.5 Haiku",
-  "gemini-2-5-pro": "Gemini 2.5 Pro",
-  "gemini-2-5-flash": "Gemini 2.5 Flash",
 };
 
 const DEFAULT_MODEL_COST = 10;
