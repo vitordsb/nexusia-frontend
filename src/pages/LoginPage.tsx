@@ -64,7 +64,7 @@ const LoginPage = () => {
 
         <div className="auth-form-group">
           <div className="auth-label-row">
-            <label htmlFor="password-input">Senha / Chave API</label>
+            <label htmlFor="password-input">Senha</label>
             <Link to="/esqueci-senha" className="auth-link">
               Esqueci minha senha
             </Link>
