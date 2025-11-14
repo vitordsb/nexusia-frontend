@@ -14,9 +14,7 @@ import {
   type CreditHistoryEntry as ApiCreditHistoryEntry,
 } from "../api/credits";
 
-export type CreditHistoryEntry = Omit<ApiCreditHistoryEntry, "direction"> & {
-  direction: "credit" | "debit";
-};
+export type CreditHistoryEntry = ApiCreditHistoryEntry;
 
 type CreditUsageMap = Record<string, number>;
 
@@ -233,12 +231,10 @@ export const useAuth = () => {
   return context;
 };
 
-type RawHistoryEntry = ApiCreditHistoryEntry | CreditHistoryEntry;
-
-function sanitizeHistory(history?: RawHistoryEntry[]): CreditHistoryEntry[] {
+function sanitizeHistory(history?: CreditHistoryEntry[]): CreditHistoryEntry[] {
   if (!Array.isArray(history)) return [];
   return history
-    .filter((entry): entry is RawHistoryEntry => Boolean(entry && entry.userId && entry.createdAt))
+    .filter((entry): entry is CreditHistoryEntry => Boolean(entry && entry.userId && entry.createdAt))
     .map((entry) => ({
       ...entry,
       id: entry.id ?? `${entry.userId}-${entry.createdAt}`,
