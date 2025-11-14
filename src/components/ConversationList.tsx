@@ -7,6 +7,7 @@ type ConversationListProps = {
   isLoading: boolean;
   error?: string | null;
   activeConversationId?: string;
+  onSelect?: () => void;
 };
 
 const ConversationList = ({
@@ -14,6 +15,7 @@ const ConversationList = ({
   isLoading,
   error,
   activeConversationId,
+  onSelect,
 }: ConversationListProps) => {
   if (isLoading) {
     return <p style={styles.muted}>Carregando conversas...</p>;
@@ -48,6 +50,7 @@ const ConversationList = ({
               ...styles.link,
               ...(isActive ? styles.activeLink : {}),
             }}
+            onClick={onSelect}
           >
             <div style={styles.linkHeader}>
               <span style={styles.title}>
@@ -145,4 +148,3 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "0.5rem",
   },
 };
-

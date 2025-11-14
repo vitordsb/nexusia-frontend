@@ -21,6 +21,7 @@ type AuthContextValue = {
   username: string | null;
   email: string | null;
   credits: number | null;
+  isReady: boolean;
   setAuthData: (data: AuthData) => void;
   logout: () => void;
 };
@@ -31,10 +32,12 @@ const STORAGE_KEY = "nexusai-auth";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [auth, setAuth] = useState<AuthData | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) {
+      setIsReady(true);
       return;
     }
     try {
@@ -53,6 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     }
+    setIsReady(true);
   }, []);
 
   const setAuthData = useCallback((data: AuthData) => {
@@ -79,10 +83,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       username: auth?.username ?? null,
       email: auth?.email ?? null,
       credits: auth?.credits ?? null,
+      isReady,
       setAuthData,
       logout
     }),
-    [auth, setAuthData, logout]
+    [auth, isReady, setAuthData, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -40,6 +40,7 @@ const ConversationsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const fetchConversations = async () => {
     if (!token) return;
@@ -71,8 +72,16 @@ const ConversationsPage = () => {
     .slice(0, 2);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isSidebarOpen ? "sidebar-open" : ""}`}>
       <aside className="sidebar">
+        <button
+          type="button"
+          className="sidebar-close"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-label="Fechar menu"
+        >
+          ×
+        </button>
         <div className="sidebar-top">
           <span className="sidebar-logo">Nexus AI</span>
           <button
@@ -89,6 +98,7 @@ const ConversationsPage = () => {
               onCreated={(conversationId) => {
                 setShowNewConversation(false);
                 void fetchConversations();
+                setIsSidebarOpen(false);
                 navigate(`/conversations/${conversationId}`);
               }}
             />
@@ -101,6 +111,7 @@ const ConversationsPage = () => {
             conversations={conversations}
             isLoading={isLoading}
             error={error}
+            onSelect={() => setIsSidebarOpen(false)}
           />
         </div>
 
@@ -116,10 +127,26 @@ const ConversationsPage = () => {
         </div>
       </aside>
 
+      {isSidebarOpen ? (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Ocultar menu de conversas"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      ) : null}
+
       <main className="workspace">
         <div className="workspace-inner workspace-scroll">
           <header className="topbar">
             <div>
+              <button
+                type="button"
+                className="sidebar-toggle"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                Conversas
+              </button>
               <div className="topbar-brand">Nexus AI</div>
               <div className="subtitle">
                 Escolha uma conversa ou comece um novo fluxo com múltiplas IAs.

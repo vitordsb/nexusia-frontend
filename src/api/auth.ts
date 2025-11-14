@@ -97,5 +97,31 @@ export async function fetchUserProfile(userId: string): Promise<AuthUser> {
   return data.user;
 }
 
+type ForgotPasswordResponse = {
+  message: string;
+  token?: string;
+  resetUrl?: string;
+};
+
+export async function requestPasswordReset(email: string) {
+  return authRequest<ForgotPasswordResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email })
+  });
+}
+
+type ResetPasswordPayload = {
+  email: string;
+  token: string;
+  password: string;
+};
+
+export async function resetPassword(payload: ResetPasswordPayload) {
+  return authRequest<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export type { AuthUser };
 export { AUTH_API_BASE_URL };

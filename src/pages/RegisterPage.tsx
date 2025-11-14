@@ -1,4 +1,3 @@
-
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../api/auth";
@@ -47,89 +46,26 @@ const RegisterPage = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #0f172a, #1e293b, #0f172a)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "Segoe UI, sans-serif",
-        padding: "1.5rem",
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "100%",
-          maxWidth: "480px",
-          background: "rgba(30, 41, 59, 0.9)",
-          borderRadius: "16px",
-          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
-          padding: "2rem",
-          color: "white",
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          transition: "transform 0.3s ease, box-shadow 0.3s ease",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "2rem",
-            fontWeight: 700,
-            marginBottom: "0.25rem",
-            textAlign: "center",
-            color: "#60a5fa",
-          }}
-        >
-          Criar conta
-        </h1>
+    <div className="auth-layout">
+      <form className="auth-card" onSubmit={handleSubmit}>
+        <div className="auth-header">
+          <h1>Criar conta</h1>
+          <p>Conecte-se à NexusAI com suas credenciais sincronizadas.</p>
+        </div>
 
-        <p
-          style={{
-            fontSize: "0.9rem",
-            textAlign: "center",
-            color: "#cbd5e1",
-            marginBottom: "2rem",
-          }}
-        >
-          Sua senha será sincronizada com a chave API utilizada na NexusAI para gerar
-          conversas.
-        </p>
-
-        {/* Nome de usuário */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="username-input" style={{ fontSize: "0.9rem" }}>
-            Nome de usuário
-          </label>
+        <div className="auth-form-group">
+          <label htmlFor="username-input">Nome de usuário</label>
           <input
             id="username-input"
-            placeholder="Seu nome completo ou apelido"
+            placeholder="Seu nome ou apelido"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
-            style={{
-              width: "100%",
-              marginTop: "0.3rem",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #334155",
-              background: "#1e293b",
-              color: "white",
-              outline: "none",
-              fontSize: "0.95rem",
-              transition: "border 0.2s, box-shadow 0.2s",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #60a5fa")}
-            onBlur={(e) => (e.target.style.border = "1px solid #334155")}
           />
         </div>
 
-        {/* Email */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="email-input" style={{ fontSize: "0.9rem" }}>
-            Email
-          </label>
+        <div className="auth-form-group">
+          <label htmlFor="email-input">Email</label>
           <input
             id="email-input"
             type="email"
@@ -137,28 +73,11 @@ const RegisterPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            style={{
-              width: "100%",
-              marginTop: "0.3rem",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #334155",
-              background: "#1e293b",
-              color: "white",
-              outline: "none",
-              fontSize: "0.95rem",
-              transition: "border 0.2s, box-shadow 0.2s",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #60a5fa")}
-            onBlur={(e) => (e.target.style.border = "1px solid #334155")}
           />
         </div>
 
-        {/* Senha */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="password-input" style={{ fontSize: "0.9rem" }}>
-            Senha / Chave API
-          </label>
+        <div className="auth-form-group">
+          <label htmlFor="password-input">Senha / Chave API</label>
           <input
             id="password-input"
             type="password"
@@ -166,97 +85,24 @@ const RegisterPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            style={{
-              width: "100%",
-              marginTop: "0.3rem",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #334155",
-              background: "#1e293b",
-              color: "white",
-              outline: "none",
-              fontSize: "0.95rem",
-              transition: "border 0.2s, box-shadow 0.2s",
-            }}
-            onFocus={(e) => (e.target.style.border = "1px solid #60a5fa")}
-            onBlur={(e) => (e.target.style.border = "1px solid #334155")}
+            minLength={6}
           />
         </div>
 
-        {/* Erros */}
-        {error && (
-          <p
-            role="alert"
-            style={{
-              marginTop: "0.5rem",
-              color: "#f87171",
-              fontSize: "0.9rem",
-              backgroundColor: "rgba(239, 68, 68, 0.1)",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "8px",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-            }}
-          >
+        {error ? (
+          <p role="alert" className="auth-error">
             {error}
           </p>
-        )}
+        ) : null}
 
-        {/* Botão */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            marginTop: "1.5rem",
-            width: "100%",
-            background: isLoading ? "#475569" : "#3b82f6",
-            color: "white",
-            fontWeight: 600,
-            padding: "0.75rem",
-            borderRadius: "8px",
-            border: "none",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            fontSize: "1rem",
-            transition: "background 0.3s ease, transform 0.1s ease",
-          }}
-          onMouseOver={(e) => {
-            if (!isLoading) e.currentTarget.style.background = "#2563eb";
-          }}
-          onMouseOut={(e) => {
-            if (!isLoading) e.currentTarget.style.background = "#3b82f6";
-          }}
-          onMouseDown={(e) => {
-            if (!isLoading) e.currentTarget.style.transform = "scale(0.97)";
-          }}
-          onMouseUp={(e) => {
-            if (!isLoading) e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
-          {isLoading ? "Criando conta..." : "Criar conta"}
+        <button type="submit" className="btn btn-primary" disabled={isLoading}>
+          {isLoading ? "Criando..." : "Criar conta"}
         </button>
 
-        {/* Link para login */}
-        <p
-          style={{
-            marginTop: "1.5rem",
-            textAlign: "center",
-            fontSize: "0.9rem",
-            color: "#cbd5e1",
-          }}
-        >
-          Já possui uma conta?{" "}
-          <Link
-            to="/login"
-            style={{
-              color: "#60a5fa",
-              textDecoration: "none",
-              fontWeight: 500,
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
-            onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
-          >
-            Faça login
-          </Link>
-        </p>
+        <div className="auth-links">
+          <span>Já possui uma conta?</span>
+          <Link to="/login">Acesse o login</Link>
+        </div>
       </form>
     </div>
   );
