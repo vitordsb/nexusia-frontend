@@ -10,9 +10,12 @@ import { sendChatCompletion } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import type { ConversationDetail, ConversationSummary, Message } from "../types";
 
+const formatCredits = (value: number | null) =>
+  new Intl.NumberFormat("pt-BR").format(value ?? 0);
+
 const ChatPage = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const { token, userId, username, email, logout } = useAuth();
+  const { token, userId, username, email, credits, logout } = useAuth();
   const navigate = useNavigate();
 
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
@@ -197,9 +200,20 @@ const ChatPage = () => {
               </div>
             </div>
             <div className="topbar-actions">
+              <div className="credits-pill">
+                <span>Saldo</span>
+                <strong>{formatCredits(credits)} créditos</strong>
+              </div>
               <span className="topbar-status">
                 <span className="status-dot" /> Multi-IA ativo
               </span>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => navigate("/assinaturas")}
+              >
+                Assinaturas
+              </button>
               <Link to="/" className="btn btn-secondary">
                 ← Conversas
               </Link>
@@ -281,4 +295,3 @@ const NavigateToHome = () => {
 };
 
 export default ChatPage;
-

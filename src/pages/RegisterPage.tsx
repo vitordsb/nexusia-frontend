@@ -1,12 +1,7 @@
 
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  loginWithCredentials,
-  registerUser,
-  requestAccessToken,
-} from "../api/auth";
-import { useAuth } from "../context/AuthContext";
+import { registerUser } from "../api/auth";
 
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
@@ -15,7 +10,6 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { setAuthData } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (event: FormEvent) => {
@@ -269,4 +263,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

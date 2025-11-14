@@ -24,7 +24,7 @@ const NewConversationForm = ({
 
   const [title, setTitle] = useState("");
   const [model, setModel] = useState(defaultModel);
-  const [mode, setMode] = useState(defaultMode);
+  const [mode, setMode] = useState<CreateConversationPayload["mode"]>(defaultMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -278,7 +278,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: "0.95rem",
   transition: "border 0.2s ease",
 };
-inputStyle["onFocus" as any] = (e: any) => (e.target.style.border = "1px solid #60a5fa");
 
 const selectStyle: React.CSSProperties = {
   width: "100%",
@@ -292,4 +291,3 @@ const selectStyle: React.CSSProperties = {
   cursor: "pointer",
   transition: "border 0.2s ease",
 };
-

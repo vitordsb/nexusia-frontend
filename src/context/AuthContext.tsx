@@ -12,6 +12,7 @@ type AuthData = {
   userId: string;
   username: string;
   email: string;
+  credits: number;
 };
 
 type AuthContextValue = {
@@ -19,6 +20,7 @@ type AuthContextValue = {
   userId: string | null;
   username: string | null;
   email: string | null;
+  credits: number | null;
   setAuthData: (data: AuthData) => void;
   logout: () => void;
 };
@@ -36,9 +38,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     try {
-      const parsed = JSON.parse(stored) as AuthData;
+      const parsed = JSON.parse(stored) as Partial<AuthData>;
       if (parsed?.token && parsed?.userId) {
-        setAuth(parsed);
+        setAuth({
+          token: parsed.token,
+          userId: parsed.userId,
+          username: parsed.username ?? "",
+          email: parsed.email ?? "",
+          credits: typeof parsed.credits === "number" ? parsed.credits : 0
+        });
       } else {
         localStorage.removeItem(STORAGE_KEY);
       }
@@ -48,8 +56,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const setAuthData = useCallback((data: AuthData) => {
-    setAuth(data);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const normalized: AuthData = {
+      token: data.token,
+      userId: data.userId,
+      username: data.username,
+      email: data.email,
+      credits: Number.isFinite(data.credits) ? data.credits : 0
+    };
+    setAuth(normalized);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
   }, []);
 
   const logout = useCallback(() => {
@@ -63,6 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       userId: auth?.userId ?? null,
       username: auth?.username ?? null,
       email: auth?.email ?? null,
+      credits: auth?.credits ?? null,
       setAuthData,
       logout
     }),

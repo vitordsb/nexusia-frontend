@@ -29,8 +29,11 @@ const quickActions = [
   }
 ];
 
+const formatCredits = (value: number | null) =>
+  new Intl.NumberFormat("pt-BR").format(value ?? 0);
+
 const ConversationsPage = () => {
-  const { token, userId, username, email, logout } = useAuth();
+  const { token, userId, username, email, credits, logout } = useAuth();
   const navigate = useNavigate();
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -123,9 +126,20 @@ const ConversationsPage = () => {
               </div>
             </div>
             <div className="topbar-actions">
+              <div className="credits-pill">
+                <span>Saldo</span>
+                <strong>{formatCredits(credits)} créditos</strong>
+              </div>
               <span className="topbar-status">
                 <span className="status-dot" /> Multi-IA ativo
               </span>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => navigate("/assinaturas")}
+              >
+                Assinaturas
+              </button>
               <button className="btn btn-secondary" onClick={fetchConversations}>
                 Atualizar
               </button>

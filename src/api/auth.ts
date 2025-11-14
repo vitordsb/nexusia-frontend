@@ -1,13 +1,15 @@
 import { apiRequest } from "./client";
 
-// Base da API de autenticação (Node). Lido do .env do Vite
-const AUTH_API_BASE_URL = "http://localhost:8080"
+// Base da API de autenticação (Node). Pode ser sobrescrita via Vite .env
+const AUTH_API_BASE_URL =
+  (import.meta as any).env?.VITE_AUTH_API_BASE_URL ?? "http://localhost:9000";
 
 type AuthUser = {
   id: string;
   email: string;
   username: string;
   createdAt: string;
+  credits: number;
 };
 
 type LoginResponse = {
@@ -86,6 +88,13 @@ export async function requestAccessToken(userId: string) {
     body: JSON.stringify({ user_id: userId })
   });
   return data.access_token;
+}
+
+export async function fetchUserProfile(userId: string): Promise<AuthUser> {
+  const data = await authRequest<{ user: AuthUser }>(`/auth/users/${userId}`, {
+    method: "GET",
+  });
+  return data.user;
 }
 
 export type { AuthUser };

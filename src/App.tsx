@@ -3,6 +3,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ConversationsPage from "./pages/ConversationsPage";
 import ChatPage from "./pages/ChatPage";
+import SubscriptionsPage from "./pages/SubscriptionsPage";
 import { useAuth } from "./context/AuthContext";
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -31,6 +32,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assinaturas"
+        element={
+          <ProtectedRoute>
+            <SubscriptionsPage />
           </ProtectedRoute>
         }
       />

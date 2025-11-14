@@ -30,6 +30,7 @@ const LoginPage = () => {
         userId: user.id,
         username: user.username,
         email: user.email,
+        credits: user.credits ?? 0,
       });
       navigate("/", { replace: true });
     } catch (err) {
@@ -222,4 +223,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
