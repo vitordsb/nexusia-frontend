@@ -5,6 +5,7 @@ import NewConversationForm from "../components/NewConversationForm";
 import { listConversations } from "../api/conversations";
 import { useAuth } from "../context/AuthContext";
 import type { ConversationSummary } from "../types";
+import logoImage from "../utils/logo.jpeg";
 
 const quickActions = [
   {
@@ -183,7 +184,13 @@ const ConversationsPage = () => {
           </header>
 
           <section className="hero-panel">
-            <div className="hero-icon" aria-hidden="true">🤖</div>
+            <div className="hero-icon">
+              <img
+                src={logoImage}
+                alt="Logo da NexusIA"
+                className="hero-logo"
+              />
+            </div>
             <div>
               <h1 className="hero-title">Nexus AI</h1>
               <p className="hero-description">
