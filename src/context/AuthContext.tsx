@@ -233,21 +233,31 @@ export const useAuth = () => {
 
 type RawHistoryEntry = Partial<ApiCreditHistoryEntry>;
 
-function sanitizeHistory(history?: RawHistoryEntry[] | CreditHistoryEntry[]): CreditHistoryEntry[] {
+function sanitizeHistory(
+  history?: RawHistoryEntry[] | CreditHistoryEntry[],
+): CreditHistoryEntry[] {
   if (!Array.isArray(history)) return [];
   return history
-    .filter((entry): entry is RawHistoryEntry => Boolean(entry && entry.userId && entry.createdAt))
-    .map((entry) => ({
-      ...entry,
-      id: entry.id ?? `${entry.userId}-${entry.createdAt}`,
-      amount: Math.max(0, Number(entry.amount) || 0),
-      balanceAfter: Number(entry.balanceAfter ?? 0),
-      createdAt: entry.createdAt ?? new Date().toISOString(),
-      direction: entry.direction === "debit" ? "debit" : "credit",
-      metadata: entry.metadata ?? null,
-      reference: entry.reference ?? null,
-      reason: entry.reason ?? null,
-    }))
+    .filter(
+      (entry): entry is RawHistoryEntry & { userId: string; createdAt: string } =>
+        Boolean(entry && typeof entry.userId === "string" && typeof entry.createdAt === "string"),
+    )
+    .map((entry): CreditHistoryEntry => {
+      const userId = entry.userId!;
+      const createdAt = entry.createdAt!;
+      return {
+        ...entry,
+        userId,
+        createdAt,
+        id: entry.id ?? `${userId}-${createdAt}`,
+        amount: Math.max(0, Number(entry.amount) || 0),
+        balanceAfter: Number(entry.balanceAfter ?? 0),
+        direction: entry.direction === "debit" ? "debit" : "credit",
+        metadata: entry.metadata ?? null,
+        reference: entry.reference ?? null,
+        reason: entry.reason ?? null,
+      };
+    })
     .slice(0, MAX_HISTORY_ENTRIES);
 }
 

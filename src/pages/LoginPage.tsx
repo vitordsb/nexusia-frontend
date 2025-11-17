@@ -31,7 +31,6 @@ const LoginPage = () => {
         username: user.username,
         email: user.email,
         credits: user.credits ?? 0,
-        creditUsage: {},
         creditHistory: [],
       });
       navigate("/", { replace: true });

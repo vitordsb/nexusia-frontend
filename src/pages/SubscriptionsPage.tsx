@@ -103,7 +103,6 @@ const SubscriptionsPage = () => {
         username: profile.username,
         email: profile.email,
         credits: profile.credits ?? 0,
-        creditUsage,
         creditHistory,
       });
       setFeedback({
