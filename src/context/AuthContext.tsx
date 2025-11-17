@@ -14,9 +14,7 @@ import {
   type CreditHistoryEntry as ApiCreditHistoryEntry,
 } from "../api/credits";
 
-export type CreditHistoryEntry = Omit<ApiCreditHistoryEntry, "direction"> & {
-  direction: "credit" | "debit";
-};
+export type CreditHistoryEntry = ApiCreditHistoryEntry;
 
 type CreditUsageMap = Record<string, number>;
 
