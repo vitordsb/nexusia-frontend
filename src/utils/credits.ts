@@ -1,12 +1,18 @@
-const MODEL_CREDIT_COST: Record<string, number> = {
-  "gpt-5": 0,
-  "gpt-5-pro": 0,
-  "gpt-5-mini": 0,
-  "claude-opus-4-1": 0,
-  "claude-sonnet-4-5": 0,
-  "claude-haiku-4-5": 0,
-  "gemini-2-5-pro": 0,
-  "gemini-2-5-flash": 0,
+const PRICING_TABLE: Record<
+  string,
+  {
+    input: number;
+    output: number;
+  }
+> = {
+  "gpt-5": { input: 1, output: 5 },
+  "gpt-5-pro": { input: 1, output: 5 },
+  "gpt-5-mini": { input: 1, output: 2 },
+  "claude-opus-4-1": { input: 10, output: 50 },
+  "claude-sonnet-4-5": { input: 2, output: 10 },
+  "claude-haiku-4-5": { input: 1, output: 3 },
+  "gemini-2-5-pro": { input: 1, output: 5 },
+  "gemini-2-5-flash": { input: 1, output: 1 },
 };
 
 const MODEL_DISPLAY_NAME: Record<string, string> = {
@@ -16,16 +22,47 @@ const MODEL_DISPLAY_NAME: Record<string, string> = {
   "claude-opus-4-1": "Claude 4.1 Opus",
   "claude-sonnet-4-5": "Claude 4.5 Sonnet",
   "claude-haiku-4-5": "Claude 4.5 Haiku",
+  "gemini-2-5-pro": "Gemini 2.5 Pro",
+  "gemini-2-5-flash": "Gemini 2.5 Flash",
 };
 
-const DEFAULT_MODEL_COST = 10;
+const MODE_COMPLETION_TOKENS: Record<"low" | "medium" | "high", number> = {
+  low: 1600,
+  medium: 3600,
+  high: 6400,
+};
 
-export function getModelCreditCost(model: string) {
-  if (!model) return DEFAULT_MODEL_COST;
-  return MODEL_CREDIT_COST[model] ?? DEFAULT_MODEL_COST;
+const DEFAULT_MODEL_COST = 25;
+
+function normalizeModelName(model: string) {
+  let normalized = model?.toLowerCase().trim() ?? "";
+  if (normalized.startsWith("models/")) {
+    normalized = normalized.split("/", 1)[1];
+  }
+  return normalized.replace(/\./g, "-");
+}
+
+function calculateCredits(model: string, promptTokens: number, completionTokens: number) {
+  const normalized = normalizeModelName(model);
+  const pricing = PRICING_TABLE[normalized];
+  if (!pricing) {
+    return DEFAULT_MODEL_COST;
+  }
+  const inputCost = (promptTokens / 100) * pricing.input;
+  const outputCost = (completionTokens / 100) * pricing.output;
+  return Math.max(1, Math.round(inputCost + outputCost));
+}
+
+export function getModelCreditCost(model: string, mode: "low" | "medium" | "high" = "medium") {
+  const completionTokens = MODE_COMPLETION_TOKENS[mode] ?? MODE_COMPLETION_TOKENS.medium;
+  return calculateCredits(model, 0, completionTokens);
 }
 
 export function getModelDisplayName(model: string) {
   if (!model) return "Modelo desconhecido";
   return MODEL_DISPLAY_NAME[model] ?? model.toUpperCase();
+}
+
+export function estimateMinimumCredits(model: string, mode: "low" | "medium" | "high") {
+  return getModelCreditCost(model, mode);
 }

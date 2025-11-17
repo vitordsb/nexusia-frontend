@@ -6,6 +6,7 @@ export type Message = {
   timestamp?: string;
   clientId?: string;
   isLoading?: boolean;
+  variant?: "error" | "info";
 };
 
 export type ConversationSummary = {

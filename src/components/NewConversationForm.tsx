@@ -14,6 +14,63 @@ type NewConversationFormProps = {
 const defaultModel = "gpt-5-mini";
 const defaultMode: CreateConversationPayload["mode"] = "low";
 
+type ModelOption = {
+  label: string;
+  value: string;
+  allowedModes: CreateConversationPayload["mode"][];
+};
+
+const modeLabels: Record<CreateConversationPayload["mode"], string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
+const MODEL_OPTIONS: ModelOption[] = [
+  {
+    label: "GPT-5 Mini",
+    value: "gpt-5-mini",
+    allowedModes: ["low"],
+  },
+  {
+    label: "GPT-5",
+    value: "gpt-5",
+    allowedModes: ["low", "medium"],
+  },
+  {
+    label: "GPT-5 Pro",
+    value: "gpt-5-pro",
+    allowedModes: ["high"],
+  },
+  {
+    label: "Claude Opus 4.1",
+    value: "claude-opus-4-1",
+    allowedModes: ["high"],
+  },
+  {
+    label: "Claude Sonnet 4.5",
+    value: "claude-sonnet-4-5",
+    allowedModes: ["low", "medium"],
+  },
+  {
+    label: "Claude Haiku 4.5",
+    value: "claude-haiku-4-5",
+    allowedModes: ["low"],
+  },
+];
+
+const getAllowedModes = (
+  modelValue: string,
+): CreateConversationPayload["mode"][] => {
+  return (
+    MODEL_OPTIONS.find((option) => option.value === modelValue)?.allowedModes ?? [
+      "low",
+      "medium",
+      "high",
+    ]
+  );
+};
+
 const NewConversationForm = ({
   onCreated,
   variant = "panel",
@@ -27,6 +84,16 @@ const NewConversationForm = ({
   const [mode, setMode] = useState<CreateConversationPayload["mode"]>(defaultMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const allowedModes = getAllowedModes(model);
+
+  const handleModelChange = (nextModel: string) => {
+    setModel(nextModel);
+    const nextAllowedModes = getAllowedModes(nextModel);
+    if (!nextAllowedModes.includes(mode)) {
+      setMode(nextAllowedModes[0]);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -143,15 +210,14 @@ const NewConversationForm = ({
           <select
             id="conversation-model"
             value={model}
-            onChange={(e) => setModel(e.target.value)}
+            onChange={(e) => handleModelChange(e.target.value)}
             style={selectStyle}
           >
-            <option value="gpt-5">GPT-5</option>
-            <option value="gpt-5-pro">GPT-5 Pro</option>
-            <option value="gpt-5-mini">GPT-5 Mini</option>
-            <option value="claude-opus-4-1">Claude Opus 4.1</option>
-            <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
+            {MODEL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -169,10 +235,13 @@ const NewConversationForm = ({
               setMode(e.target.value as CreateConversationPayload["mode"])
             }
             style={selectStyle}
+            disabled={allowedModes.length === 1}
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            {allowedModes.map((allowedMode) => (
+              <option key={allowedMode} value={allowedMode}>
+                {modeLabels[allowedMode]}
+              </option>
+            ))}
           </select>
         </div>
       </div>

@@ -117,21 +117,23 @@ const ConversationsPage = () => {
         </div>
 
         <div className="sidebar-footer">
-          <div className="sidebar-avatar">{userInitials || "U"}</div>
-          <div className="sidebar-user">
-            <strong>{displayName}</strong>
-            <span>{email ?? "Conectado"}</span>
+          <div className="sidebar-profile-info">
+            <div className="sidebar-avatar">{userInitials || "U"}</div>
+            <div className="sidebar-user">
+              <strong>{displayName}</strong>
+              <span>{email ?? "Conectado"}</span>
+            </div>
           </div>
-          <div className="sidebar-footer-actions">
+          <div className="sidebar-user-actions">
+            <button type="button" className="sidebar-logout" onClick={logout}>
+              Sair
+            </button>
             <button
               type="button"
               className="sidebar-profile-button"
               onClick={() => navigate("/perfil")}
             >
               Assinatura
-            </button>
-            <button type="button" className="sidebar-logout" onClick={logout}>
-              Sair
             </button>
           </div>
         </div>
@@ -170,13 +172,6 @@ const ConversationsPage = () => {
               <span className="topbar-status">
                 <span className="status-dot" /> Multi-IA ativo
               </span>
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={() => navigate("/perfil")}
-              >
-                Assinatura
-              </button>
               <button className="btn btn-secondary" onClick={fetchConversations}>
                 Atualizar
               </button>

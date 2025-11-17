@@ -9,7 +9,13 @@ import { getConversation, listConversations } from "../api/conversations";
 import { sendChatCompletion } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { getModelCreditCost, getModelDisplayName } from "../utils/credits";
-import type { ConversationDetail, ConversationSummary, Message } from "../types";
+import type { ConversationDetail, ConversationSummary, Message, Usage } from "../types";
+
+type PendingRetry = {
+  content: string;
+  cost: number;
+  placeholderId?: string;
+};
 
 const formatCredits = (value: number | null) =>
   new Intl.NumberFormat("pt-BR").format(value ?? 0);
@@ -30,6 +36,12 @@ const ChatPage = () => {
   const [sidebarError, setSidebarError] = useState<string | null>(null);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [pendingDebit, setPendingDebit] = useState(0);
+  const [lastUsage, setLastUsage] = useState<Usage | null>(null);
+  const lastUsageCredits = lastUsage?.cost_credits ?? 0;
+  const [retryRequest, setRetryRequest] = useState<PendingRetry | null>(null);
+  const retryingRef = useRef(false);
+  const prevCreditsRef = useRef(credits ?? 0);
 
   // 🔽 referência para rolagem automática
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -97,38 +109,88 @@ const ChatPage = () => {
 
   useEffect(() => {
     setIsSidebarOpen(false);
+    setPendingDebit(0);
+    setRetryRequest(null);
   }, [conversationId]);
 
   const messages = useMemo(() => conversation?.messages ?? [], [conversation]);
-  const composerCost = conversation ? getModelCreditCost(conversation.model) : null;
+  const composerCost = conversation
+    ? getModelCreditCost(conversation.model, conversation.mode)
+    : null;
+  const realtimeCredits = useMemo(
+    () => Math.max((credits ?? 0) - pendingDebit, 0),
+    [credits, pendingDebit],
+  );
 
-  const handleSend = async (content: string) => {
-    if (!token || !conversation || !conversationId || isSwitchingConversation) return;
-    const costPerMessage = getModelCreditCost(conversation.model);
-    const availableCredits = credits ?? 0;
-    if (availableCredits < costPerMessage) {
-      setError(
-        `Créditos insuficientes para usar ${getModelDisplayName(
-          conversation.model,
-        )}. Necessários: ${formatCredits(costPerMessage)} créditos. Recarregue na página de Perfil.`,
-      );
-      return;
-    }
+  const handleAssistantSuccess = useCallback(
+    ({
+      assistantMessage,
+      createdAt,
+      placeholderId,
+      usage,
+    }: {
+      assistantMessage?: Message;
+      createdAt: number;
+      placeholderId: string;
+      usage?: Usage;
+    }) => {
+      const assistantContent = assistantMessage?.content?.trim();
+      setConversation((current) => {
+        if (!current) return current;
+        const withoutPlaceholder = current.messages.filter(
+          (message) => message.clientId !== placeholderId,
+        );
+        if (assistantContent) {
+          withoutPlaceholder.push({
+            role: assistantMessage?.role ?? "assistant",
+            content: assistantContent,
+            timestamp: new Date(createdAt * 1000).toISOString(),
+          });
+          setLastUsage(usage ?? null);
+        } else {
+          withoutPlaceholder.push({
+            role: "assistant",
+            content:
+              "O modelo finalizou sem gerar uma resposta exibível. Tente reformular a pergunta.",
+            timestamp: new Date().toISOString(),
+            variant: "error",
+          });
+          setLastUsage(null);
+        }
+        return {
+          ...current,
+          messages: withoutPlaceholder,
+          updated_at: new Date().toISOString(),
+        };
+      });
+    },
+    [],
+  );
 
-    const baseMessages = conversation.messages ?? [];
-    const payloadMessages: Message[] = [
-      ...baseMessages.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user", content },
-    ];
+  const handleSend = useCallback(
+    async (content: string): Promise<boolean> => {
+      if (!token || !conversation || !conversationId || isSwitchingConversation) {
+        return false;
+      }
+      const trimmed = content.trim();
+      if (!trimmed) return false;
+      const costPerMessage = getModelCreditCost(conversation.model, conversation.mode);
+      const availableCredits = (credits ?? 0) - pendingDebit;
+      const guardCredits = Math.max(costPerMessage, lastUsageCredits, 1);
+      const baseMessages = conversation.messages ?? [];
+      const payloadMessages: Message[] = [
+        ...baseMessages.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: trimmed },
+      ];
 
-    const now = new Date();
-    const optimisticIdSeed = `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
-    const userClientId = `user-${optimisticIdSeed}`;
-    const assistantPlaceholderId = `assistant-${optimisticIdSeed}`;
+      const now = new Date();
+      const optimisticIdSeed = `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
+      const userClientId = `user-${optimisticIdSeed}`;
+      const assistantPlaceholderId = `assistant-${optimisticIdSeed}`;
 
     const optimisticUserMessage: Message = {
       role: "user",
-      content,
+      content: trimmed,
       timestamp: now.toISOString(),
       clientId: userClientId,
     };
@@ -140,72 +202,224 @@ const ChatPage = () => {
       clientId: assistantPlaceholderId,
     };
 
-    setConversation((current) =>
-      current
-        ? {
-            ...current,
-            messages: [...current.messages, optimisticUserMessage, pendingAssistantMessage],
-            updated_at: now.toISOString(),
-          }
-        : current
-    );
-
-    setIsSending(true);
-    try {
-      const response = await sendChatCompletion(token, {
-        model: conversation.model,
-        mode: conversation.mode,
-        conversation_id: conversationId,
-        stream: false,
-        messages: payloadMessages,
+    if (availableCredits < guardCredits) {
+      setError(
+        `Créditos insuficientes para usar ${getModelDisplayName(
+          conversation.model,
+        )}. Necessários: ${formatCredits(guardCredits)} créditos.`,
+      );
+      setRetryRequest({
+        content: trimmed,
+        cost: guardCredits,
       });
+      return false;
+    }
 
-      const assistantMessage = response.choices[0]?.message;
-      setConversation((current) => {
-        if (!current) return current;
-        const withoutPlaceholder = current.messages.filter(
-          (message) => message.clientId !== assistantPlaceholderId
-        );
-        const updatedMessages: Message[] = [...withoutPlaceholder];
-
-        if (assistantMessage) {
-          updatedMessages.push({
-            role: assistantMessage.role,
-            content: assistantMessage.content,
-            timestamp: new Date(response.created * 1000).toISOString(),
-          });
-        }
-
-        return {
-          ...current,
-          messages: updatedMessages,
-          updated_at: new Date().toISOString(),
-        };
-      });
-      setError(null);
-      void refreshCredits();
-      void loadConversation();
-      void fetchSidebarConversations();
-    } catch (err) {
+    setRetryRequest(null);
       setConversation((current) =>
         current
           ? {
               ...current,
-              messages: current.messages.filter(
-                (message) =>
-                  message.clientId !== assistantPlaceholderId &&
-                  message.clientId !== userClientId
+              messages: [...current.messages, optimisticUserMessage, pendingAssistantMessage],
+              updated_at: now.toISOString(),
+          }
+          : current
+      );
+
+      setPendingDebit(guardCredits);
+      setIsSending(true);
+      try {
+        const response = await sendChatCompletion(token, {
+          model: conversation.model,
+          mode: conversation.mode,
+          conversation_id: conversationId,
+          stream: false,
+          messages: payloadMessages,
+        });
+
+        handleAssistantSuccess({
+          assistantMessage: response.choices[0]?.message,
+          createdAt: response.created,
+          placeholderId: assistantPlaceholderId,
+          usage: response.usage,
+        });
+        setError(null);
+        void refreshCredits();
+        void loadConversation();
+        void fetchSidebarConversations();
+      } catch (err) {
+        const fallbackMessage =
+          err instanceof Error ? err.message : "Não foi possível enviar a mensagem.";
+        const insufficient = /saldo insuficiente/i.test(fallbackMessage);
+        setConversation((current) =>
+          current
+            ? {
+                ...current,
+                messages: current.messages.map((message) =>
+                  message.clientId === assistantPlaceholderId
+                    ? {
+                        ...message,
+                        isLoading: false,
+                        variant: "error",
+                        content: insufficient
+                          ? "Saldo insuficiente para concluir a resposta. Recarregue e retomaremos automaticamente."
+                          : `Não foi possível gerar uma resposta agora. ${fallbackMessage}`,
+                      }
+                    : message
+                ),
+              }
+            : current
+        );
+        setError(fallbackMessage);
+        setLastUsage(null);
+        if (insufficient) {
+          setRetryRequest({
+            content: trimmed,
+            cost: guardCredits,
+            placeholderId: assistantPlaceholderId,
+          });
+        }
+      } finally {
+        setIsSending(false);
+        setPendingDebit(0);
+      }
+      return true;
+    },
+    [
+      conversation,
+      conversationId,
+      credits,
+      fetchSidebarConversations,
+      handleAssistantSuccess,
+      isSwitchingConversation,
+      lastUsageCredits,
+      loadConversation,
+      pendingDebit,
+      refreshCredits,
+      token,
+    ]
+  );
+
+  const retryPendingResponse = useCallback(
+    async (request: PendingRetry) => {
+      if (!request.placeholderId) {
+        setRetryRequest(null);
+        await handleSend(request.content);
+        return;
+      }
+      if (!token || !conversation || !conversationId) return;
+      const baseMessages = (conversation.messages ?? []).filter(
+        (message) => message.clientId !== request.placeholderId
+      );
+      if (!baseMessages.length) {
+        setRetryRequest(null);
+        return;
+      }
+      setIsSending(true);
+      setPendingDebit(request.cost);
+      setConversation((current) =>
+        current
+          ? {
+              ...current,
+              messages: current.messages.map((message) =>
+                message.clientId === request.placeholderId
+                  ? {
+                      ...message,
+                      isLoading: true,
+                      variant: undefined,
+                      content: "",
+                    }
+                  : message
               ),
             }
           : current
       );
-      setError(
-        err instanceof Error ? err.message : "Não foi possível enviar a mensagem."
-      );
-    } finally {
-      setIsSending(false);
+      try {
+        const payloadMessages = baseMessages.map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
+        const response = await sendChatCompletion(token, {
+          model: conversation.model,
+          mode: conversation.mode,
+          conversation_id: conversationId,
+          stream: false,
+          messages: payloadMessages,
+        });
+        handleAssistantSuccess({
+          assistantMessage: response.choices[0]?.message,
+          createdAt: response.created,
+          placeholderId: request.placeholderId,
+          usage: response.usage,
+        });
+        setRetryRequest(null);
+        setError(null);
+        void refreshCredits();
+        void loadConversation();
+        void fetchSidebarConversations();
+      } catch (err) {
+        const fallbackMessage =
+          err instanceof Error ? err.message : "Não foi possível enviar a mensagem.";
+        const insufficient = /saldo insuficiente/i.test(fallbackMessage);
+        setConversation((current) =>
+          current
+            ? {
+                ...current,
+                messages: current.messages.map((message) =>
+                  message.clientId === request.placeholderId
+                    ? {
+                        ...message,
+                        isLoading: false,
+                        variant: "error",
+                        content: insufficient
+                          ? "Saldo insuficiente para continuar. Recarregue para retomar automaticamente."
+                          : `Não foi possível gerar resposta. ${fallbackMessage}`,
+                      }
+                    : message
+                ),
+              }
+            : current
+        );
+        setError(fallbackMessage);
+        if (!insufficient) {
+          setRetryRequest(null);
+        }
+      } finally {
+        setPendingDebit(0);
+        setIsSending(false);
+      }
+    },
+    [
+      conversation,
+      conversationId,
+      fetchSidebarConversations,
+      handleSend,
+      handleAssistantSuccess,
+      loadConversation,
+      refreshCredits,
+      token,
+    ],
+  );
+
+  useEffect(() => {
+    const currentCredits = credits ?? 0;
+    const previousCredits = prevCreditsRef.current;
+    prevCreditsRef.current = currentCredits;
+    if (!retryRequest || retryingRef.current) return;
+    if (currentCredits >= retryRequest.cost && currentCredits > previousCredits) {
+      retryingRef.current = true;
+      const request = retryRequest;
+      const promise = request.placeholderId
+        ? retryPendingResponse(request)
+        : (async () => {
+            setRetryRequest(null);
+            await handleSend(request.content);
+          })();
+      void promise.finally(() => {
+        retryingRef.current = false;
+      });
     }
-  };
+  }, [credits, handleSend, retryPendingResponse, retryRequest]);
 
   if (!conversationId) return <NavigateToHome />;
 
@@ -262,21 +476,23 @@ const ChatPage = () => {
         </div>
 
         <div className="sidebar-footer">
-          <div className="sidebar-avatar">{userInitials || "U"}</div>
-          <div className="sidebar-user">
-            <strong>{displayName}</strong>
-            <span>{email ?? "Conectado"}</span>
+          <div className="sidebar-profile-info">
+            <div className="sidebar-avatar">{userInitials || "U"}</div>
+            <div className="sidebar-user">
+              <strong>{displayName}</strong>
+              <span>{email ?? "Conectado"}</span>
+            </div>
           </div>
-          <div className="sidebar-footer-actions">
+          <div className="sidebar-user-actions">
+            <button type="button" className="sidebar-logout" onClick={logout}>
+              Sair
+            </button>
             <button
               type="button"
               className="sidebar-profile-button"
               onClick={() => navigate("/perfil")}
             >
               Assinatura
-            </button>
-            <button type="button" className="sidebar-logout" onClick={logout}>
-              Sair
             </button>
           </div>
         </div>
@@ -313,15 +529,17 @@ const ChatPage = () => {
             </div>
             <div className="topbar-actions">
               <div className="credits-pill">
-                <span>Saldo</span>
-                <strong>{formatCredits(credits)} créditos</strong>
+                <span>Saldo em tempo real</span>
+                <strong>{formatCredits(realtimeCredits)} créditos</strong>
+                {pendingDebit > 0 ? (
+                  <span className="credits-pill-sub">
+                    -{formatCredits(pendingDebit)} em processamento
+                  </span>
+                ) : null}
               </div>
               <span className="topbar-status">
                 <span className="status-dot" /> Multi-IA ativo
               </span>
-              <Link to="/perfil" className="btn btn-outline">
-                Assinatura
-              </Link>
               <Link to="/" className="btn btn-secondary">
                 ← Conversas
               </Link>
@@ -358,7 +576,7 @@ const ChatPage = () => {
               <div
                 className="panel panel-scroll"
                 style={{
-                  maxHeight: "calc(100vh - 200px)",
+                  maxHeight: "calc(100vh - 140px)",
                   overflowY: "auto",
                   paddingBottom: "0.5rem",
                   scrollBehavior: "smooth",
@@ -391,6 +609,9 @@ const ChatPage = () => {
                 creditCost={composerCost ?? undefined}
                 model={conversation.model}
                 mode={conversation.mode}
+                availableCredits={realtimeCredits}
+                pendingDebit={pendingDebit}
+                lastUsage={lastUsage ?? undefined}
               />
               {isSwitchingConversation ? (
                 <div className="chat-loading-overlay" aria-live="polite">
